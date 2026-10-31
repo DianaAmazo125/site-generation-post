@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI.POST — Космический генератор постов</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://googleapis.com" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">AI.VIBE / GENERATOR</div>
+            <h1>Умный генератор <span>рекламных постов</span></h1>
+            <p>Опишите свой товар, выберите настроение, а система мгновенно соберёт продающий текст по формуле.</p>
+        </header>
+
+        <!-- Вывод предупреждения об ошибке (ТЗ) -->
+        {% if error_message %}
+        <div class="error-toast">{{ error_message }}</div>
+        {% endif %}
+
+        <div class="main-layout">
+            <!-- Блок формы ввода -->
+            <form method="POST" class="glass-panel">
+                <div class="form-group">
+                    <label for="product_name">Название товара</label>
+                    <input type="text" id="product_name" name="product_name" value="{{ product_name }}" placeholder="Например: Умная термокружка">
+                </div>
+
+                <div class="form-group">
+                    <label for="product_desc">Описание товара <span class="required">*</span></label>
+                    <textarea id="product_desc" name="product_desc" placeholder="Расскажите о главных фишках, пользе или характеристиках товара...">{{ product_desc }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="product_price">Цена или Выгода</label>
+                    <input type="text" id="product_price" name="product_price" value="{{ product_price }}" placeholder="Например: 1990 руб. или Скидка 30%">
+                </div>
+
+                <div class="form-group">
+                    <label for="mood">Настроение поста</label>
+                    <select id="mood" name="mood">
+                        <option value="expert" {% if selected_mood == 'expert' %}selected{% endif %}>🎯 Экспертный тон</option>
+                        <option value="friendly" {% if selected_mood == 'friendly' %}selected{% endif %}>✨ Дружелюбный тон</option>
+                        <option value="funny" {% if selected_mood == 'funny' %}selected{% endif %}>🤪 С юмором</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-generate">Сформировать пост 🚀</button>
+            </form>
+
+            <!-- Блок вывода готового результата -->
+            <div class="glass-panel result-panel">
+                <h2>Готовый пост</h2>
+                <div class="output-box" id="post-content">
+                    {% if post_text %}
+                        {{ post_text | replace('\n', '<br>') | safe }}
+                    {% else %}
+                        <span class="placeholder-text">Здесь появится ваш идеальный продающий текст. Заполните форму слева и нажмите кнопку! ✨</span>
+                    {% endif %}
+                </div>
+                
+                {% if post_text %}
+                <button class="btn-copy" onclick="copyPost()">Скопировать пост 📋</button>
+                <div class="copy-alert" id="copy-alert">🚀 Пост скопирован в буфер обмена!</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function copyPost() {
+            // Хитрая очистка HTML-тегов для копирования чистого текста с переносами
+            const rawText = `{{ post_text | safe }}`;
+            navigator.clipboard.writeText(rawText).then(() => {
+                const alertBox = document.getElementById('copy-alert');
+                alertBox.classList.add('show');
+                setTimeout(() => {
+                    alertBox.classList.remove('show');
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
