@@ -2,85 +2,80 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI.POST — Космический генератор постов</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link href="https://googleapis.com" rel="stylesheet">
+    <title>Генератор постов | DianaAmazo125</title>
+    <!-- Подключаем Bootstrap для красивого современного интерфейса -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+        body { background: #0f172a; color: #f8fafc; font-family: sans-serif; padding-top: 40px; }
+        .card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); color: white; }
+        .form-control, .form-select { background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.2); }
+        .form-control:focus, .form-select:focus { background: rgba(0,0,0,0.5); color: white; border-color: #38bdf8; box-shadow: none; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="logo">AI.VIBE / GENERATOR</div>
-            <h1>Умный генератор <span>рекламных постов</span></h1>
-            <p>Опишите свой товар, выберите настроение, а система мгновенно соберёт продающий текст по формуле.</p>
-        </header>
-
-        <!-- Вывод предупреждения об ошибке (ТЗ) -->
-        {% if error_message %}
-        <div class="error-toast">{{ error_message }}</div>
-        {% endif %}
-
-        <div class="main-layout">
-            <!-- Блок формы ввода -->
-            <form method="POST" class="glass-panel">
-                <div class="form-group">
-                    <label for="product_name">Название товара</label>
-                    <input type="text" id="product_name" name="product_name" value="{{ product_name }}" placeholder="Например: Умная термокружка">
-                </div>
-
-                <div class="form-group">
-                    <label for="product_desc">Описание товара <span class="required">*</span></label>
-                    <textarea id="product_desc" name="product_desc" placeholder="Расскажите о главных фишках, пользе или характеристиках товара...">{{ product_desc }}</textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="product_price">Цена или Выгода</label>
-                    <input type="text" id="product_price" name="product_price" value="{{ product_price }}" placeholder="Например: 1990 руб. или Скидка 30%">
-                </div>
-
-                <div class="form-group">
-                    <label for="mood">Настроение поста</label>
-                    <select id="mood" name="mood">
-                        <option value="expert" {% if selected_mood == 'expert' %}selected{% endif %}>🎯 Экспертный тон</option>
-                        <option value="friendly" {% if selected_mood == 'friendly' %}selected{% endif %}>✨ Дружелюбный тон</option>
-                        <option value="funny" {% if selected_mood == 'funny' %}selected{% endif %}>🤪 С юмором</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-generate">Сформировать пост 🚀</button>
-            </form>
-
-            <!-- Блок вывода готового результата -->
-            <div class="glass-panel result-panel">
-                <h2>Готовый пост</h2>
-                <div class="output-box" id="post-content">
-                    {% if post_text %}
-                        {{ post_text | replace('\n', '<br>') | safe }}
-                    {% else %}
-                        <span class="placeholder-text">Здесь появится ваш идеальный продающий текст. Заполните форму слева и нажмите кнопку! ✨</span>
-                    {% endif %}
-                </div>
+    <div class="container mb-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h2 class="mb-4 text-center text-info">🚀 Панель управления контентом</h2>
                 
-                {% if post_text %}
-                <button class="btn-copy" onclick="copyPost()">Скопировать пост 📋</button>
-                <div class="copy-alert" id="copy-alert">🚀 Пост скопирован в буфер обмена!</div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+                <!-- Блок всплывающих уведомлений Flask -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                  {% if messages %}
+                    {% for category, message in messages %}
+                      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                {% endwith %}
 
-    <script>
-        function copyPost() {
-            // Хитрая очистка HTML-тегов для копирования чистого текста с переносами
-            const rawText = `{{ post_text | safe }}`;
-            navigator.clipboard.writeText(rawText).then(() => {
-                const alertBox = document.getElementById('copy-alert');
-                alertBox.classList.add('show');
-                setTimeout(() => {
-                    alertBox.classList.remove('show');
-                }, 3000);
-            });
-        }
-    </script>
-</body>
-</html>
+                <div class="card p-4 shadow mb-4">
+                    <form method="POST">
+                        <h4 class="text-secondary mb-3">1. Параметры товара</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Название товара:</label>
+                            <input type="text" name="product_name" class="form-control" value="{{ product_name }}" placeholder="Например: Беспроводные наушники">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Описание:</label>
+                            <textarea name="product_desc" class="form-control" rows="3" placeholder="Укажите главные характеристики товара...">{{ product_desc }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Цена товара:</label>
+                            <input type="text" name="product_price" class="form-control" value="{{ product_price }}" placeholder="Например: 2990 руб.">
+                        </div>
+                        
+                        <h4 class="text-secondary mt-4 mb-3">2. Настройки Tone of Voice</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Выберите тональность (нажмите для выбора 🔽):</label>
+                            <div class="d-flex gap-2 align-items-center">
+                                <select name="selected_mood" class="form-select text-white bg-dark border-secondary flex-grow-1">
+                                    <option value="expert" {% if selected_mood == 'expert' %}selected{% endif %}>🎓 Экспертный</option>
+                                    <option value="friendly" {% if selected_mood == 'friendly' %}selected{% endif %}>🤝 Дружелюбный</option>
+                                    <option value="humorous" {% if selected_mood == 'humorous' %}selected{% endif %}>🚀 Юмористический</option>
+                                    <option value="sales" {% if selected_mood == 'sales' %}selected{% endif %}>🔥 Продающий (Скидки/Акция)</option>
+                                    <option value="formal" {% if selected_mood == 'formal' %}selected{% endif %}>💼 Официально-деловой</option>
+                                    <option value="storytelling" {% if selected_mood == 'storytelling' %}selected{% endif %}>📖 Сторителлинг (История)</option>
+                                 </select>
+                                <!-- Перенесли кнопку фиксации прямо к выбору тона! -->
+                                <button type="submit" name="save_changes" class="btn btn-outline-info fw-bold">
+                                    📝 Зафиксировать в voice.md
+                                </button>
+                            </div>
+                        </div>
+
+                        <h4 class="text-secondary mt-4 mb-3">3. Работа с текстом поста</h4>
+                        <div class="mb-3">
+                            <label class="form-label">Готовый текст (можно редактировать руками перед отправкой):</label>
+                            <textarea name="post_text" class="form-control" rows="6">{{ post_text }}</textarea>
+                        </div>
+                        
+                        <!-- Внизу остались только главные кнопки генерации и отправки в соцсети -->
+                        <div class="d-flex flex-column gap-2 mt-4">
+                            <button type="submit" name="generate_post" class="btn btn-info w-100 fw-bold text-dark">
+                                🤖 Сгенерировать пост через ИИ
+                            </button>
+                            <button type="submit" name="publish_vk" class="btn btn-primary w-100 fw-bold">
+                                🚀 Опубликовать в VK
+                            </button>
+                        </div>
