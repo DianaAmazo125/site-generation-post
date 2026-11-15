@@ -1,1 +1,16 @@
+# Секреты
 .env
+
+# Виртуальные окружения
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Node (на случай сборки фронтенда)
+node_modules/
+
+# ОС и IDE
+.DS_Store

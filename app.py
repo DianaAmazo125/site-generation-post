@@ -7,11 +7,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "diana_amazo_secret_key"
+# Секретный ключ берём из окружения. Значение по умолчанию — только для локальной отладки.
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
 # Бэкенд берет ключи из окружения — твой ВК в полной безопасности!
 VK_TOKEN = os.getenv("VK_TOKEN")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID")
+
+# DeepSeek через ProxyAPI — OpenAI-совместимый эндпоинт (оплата в рублях, без VPN)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.proxyapi.ru/v1").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "deepseek/deepseek-chat").strip()
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -37,7 +43,7 @@ def index():
             if not product_name:
                 flash("❌ Укажите хотя бы название товара для генерации!", "danger")
             else:
-                flash("🤖 Отправляю запрос в бесплатную нейросеть...", "info")
+                flash("🤖 Отправляю запрос в DeepSeek через ProxyAPI...", "info")
                 
                 # Формируем промпт под выбранную тональность контента
                 prompt = (
@@ -49,16 +55,40 @@ def index():
                     f"Используй эмодзи и абзацы."
                 )
                 
-                url = "https://pollinations.ai"
                 try:
-                    response = requests.get(f"{url}{requests.utils.quote(prompt)}", timeout=20)
-                    if response.status_code == 200 and response.text.strip():
-                        post_text = response.text.strip()
-                        flash("🎉 Текст поста успешно сгенерирован ИИ бесплатно!", "success")
-                    else:
-                        raise Exception("Ошибка сервера ИИ")
+                    if not OPENAI_API_KEY:
+                        raise Exception("Не задан OPENAI_API_KEY в файле .env")
+
+                    response = requests.post(
+                        f"{OPENAI_BASE_URL}/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {OPENAI_API_KEY}",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": OPENAI_MODEL,
+                            "messages": [
+                                {
+                                    "role": "system",
+                                    "content": (
+                                        "Ты опытный SMM-копирайтер. Пишешь короткие продающие "
+                                        "посты на русском языке, используешь эмодзи и абзацы."
+                                    ),
+                                },
+                                {"role": "user", "content": prompt},
+                            ],
+                            "temperature": 0.7,
+                            "max_tokens": 800,
+                        },
+                        timeout=60,
+                    )
+                    response.raise_for_status()
+                    post_text = (response.json()["choices"][0]["message"]["content"] or "").strip()
+                    if not post_text:
+                        raise Exception("Модель вернула пустой ответ")
+                    flash("🎉 Текст поста сгенерирован нейросетью DeepSeek!", "success")
                 except Exception as e:
-                    # Умный локальный генератор на все 6 тонов на случай сбоев сети
+                    # Резерв: умный локальный генератор на все 6 тонов на случай сбоя сети/API
                     if selected_mood == "humorous":
                         header_vibe = f"🚀 Внимание, земляне! Космический юмор на связи! Встречайте: {product_name}! 🔥"
                         desc_vibe = f"🛸 Что умеет эта штука: {product_desc}. Да-да, технологии будущего уже тут!"
@@ -102,19 +132,27 @@ def index():
         # ЛОГИКА 3: Клик по кнопке "🚀 Опубликовать в VK"
         # ---------------------------------------------------------------------
         elif "publish_vk" in request.form:
-            url = "https://vk.com"
+            # Официальный метод публикации записи на стену сообщества
+            url = "https://api.vk.com/method/wall.post"
             params = {
                 "access_token": VK_TOKEN,
                 "owner_id": VK_GROUP_ID,
                 "message": post_text,
+                "from_group": 1,  # публикуем от имени сообщества, а не от лица админа
                 "v": "5.131"
             }
             try:
                 response = requests.post(url, data=params, timeout=10)
-                if response.status_code == 200:
+                # VK отвечает HTTP 200 даже при ошибке — результат всегда внутри JSON
+                try:
+                    payload = response.json()
+                except ValueError:
+                    payload = {}
+                if response.status_code == 200 and "error" not in payload:
                     flash("🎉 Пост успешно опубликован на стене VK!", "success")
                 else:
-                    flash(f"❌ Ошибка сервера VK. Статус-код: {response.status_code}", "danger")
+                    reason = payload.get("error", {}).get("error_msg") or f"HTTP {response.status_code}"
+                    flash(f"❌ VK вернул ошибку: {reason}", "danger")
             except Exception as e:
                 flash(f"❌ Ошибка сети при отправке в VK: {str(e)}", "danger")
 
